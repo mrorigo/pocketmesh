@@ -1,4 +1,3 @@
-
 ![PocketMesh Logo](./pocketmesh.png)
 
 # PocketMesh
@@ -9,6 +8,11 @@
 
 **Build powerful, type-safe, async-native agentic workflows in TypeScript—**
 **with first-class [A2A protocol](https://google.github.io/A2A/) support for open, interoperable agent APIs.**
+
+---
+
+> **Inspired by [PocketFlow](https://github.com/The-Pocket/PocketFlow):**
+> PocketMesh brings the minimalist, expressive, and agentic coding philosophy of PocketFlow (Python) to the TypeScript ecosystem—now with native A2A protocol support and advanced type safety.
 
 ---
 
@@ -308,7 +312,6 @@ npm test
 
 - Tests are located in `__tests__/`.
 - All core abstractions are covered: single-node, multi-node, batch, and retry/fallback flows.
-- Extend the test suite to cover your custom nodes and flows.
 
 ---
 
@@ -318,6 +321,7 @@ npm test
 - [Agentic Coding Guide (Prompt for LLMs/Agents)](./docs/agent-prompt.md)
 - [PocketMesh Example Flows](./src/demo/)
 - [PocketMesh A2A Demo](./src/demo/a2a/index.ts)
+- [PocketFlow (Python, original inspiration)](https://github.com/The-Pocket/PocketFlow)
 
 ---
 
