@@ -1,0 +1,68 @@
+{
+  "name": "pocketmesh",
+  "version": "0.1.0",
+  "description": "A modern, type-safe, async-native framework for building agentic applications and A2A-compliant workflows in TypeScript.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "docs/",
+    "pocketmesh.png"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mrorigo/pocketmesh.git"
+  },
+  "homepage": "https://github.com/mrorigo/pocketmesh#readme",
+  "bugs": {
+    "url": "https://github.com/mrorigo/pocketmesh/issues"
+  },
+  "author": "Zachary Huang <mrorigo@gmail.com>",
+  "license": "MIT",
+  "keywords": [
+    "typescript",
+    "a2a",
+    "async",
+    "agent",
+    "workflow",
+    "minimalist",
+    "pocketflow",
+    "pocketmesh",
+    "multi-agent",
+    "llm",
+    "orchestration",
+    "automation"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "a2a-demo": "npx ts-node src/demo/a2a/index.ts",
+    "test": "jest --config jest.config.js --passWithNoTests",
+    "prepare": "npm run build"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/compression": "^1.7.5",
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.14.1",
+    "@types/uuid": "^10.0.0",
+    "@types/jest": "^29.5.11",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.9.1",
+    "body-parser": "^2.2.0",
+    "compression": "^1.8.0",
+    "express": "^5.1.0",
+    "undici": "^7.8.0",
+    "uuid": "^11.1.0",
+    "zod": "^3.24.2",
+    "winston": "^3.13.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
