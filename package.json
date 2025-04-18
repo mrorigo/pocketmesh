@@ -19,7 +19,7 @@
   "bugs": {
     "url": "https://github.com/mrorigo/pocketmesh/issues"
   },
-  "author": "Zachary Huang <mrorigo@gmail.com>",
+  "author": "mrorigo <mrorigo@gmail.com>",
   "license": "MIT",
   "keywords": [
     "typescript",

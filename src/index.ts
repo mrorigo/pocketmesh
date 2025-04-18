@@ -6,3 +6,9 @@
  */
 
 export * from "./core";
+export {
+  a2aServerHandler,
+  createA2AClient,
+  generateAgentCard,
+  handleA2ARequest,
+} from "./a2a";
