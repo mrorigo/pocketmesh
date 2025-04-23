@@ -19,6 +19,7 @@ const winstonLogger = winston.createLogger({
 });
 
 export const logger: Logger = {
+  debug: (...args: any[]) => winstonLogger.debug(args.map(String).join(" ")),
   log: (...args: any[]) => winstonLogger.info(args.map(String).join(" ")),
   error: (...args: any[]) => winstonLogger.error(args.map(String).join(" ")),
   warn: (...args: any[]) => winstonLogger.warn(args.map(String).join(" ")),
