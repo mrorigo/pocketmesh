@@ -1,3 +1,4 @@
+import { Flow } from "./flow"; // Keep import for Flow
 import type { SharedState, Params, ActionResult, NodeOptions } from "./types";
 
 /**
@@ -34,7 +35,8 @@ export abstract class BaseNode<
   /**
    * Reference to the parent Flow (set automatically).
    */
-   public flow?: import("./flow").Flow<any, any, any, any>;
+  // Changed type annotation to allow Flow<S, P, any, any> for better type hints if possible, but kept any for compatibility
+  public flow?: Flow<S, P, any, Action>;
 
   /**
    * Successor nodes, keyed by action string.
@@ -68,18 +70,24 @@ export abstract class BaseNode<
    * @param action Action string (default: "default")
    * @returns node
    */
-   addSuccessor<N extends BaseNode<any, any, any, any, any>>(
-     node: N,
-     action: string = "default",
-   ): N {
-     if (this.successors.has(action)) {
-       throw new Error(
-         `Successor for action '${action}' already exists in node ${this.constructor.name}.`,
-       );
-     }
-     this.successors.set(action, node);
-     return node;
-   }
+  addSuccessor<N extends BaseNode<any, any, any, any, any>>( // Keep generics for flexibility
+    node: N,
+    action: string = "default",
+  ): N {
+    if (this.successors.has(action)) {
+      throw new Error(
+        `Successor for action '${action}' already exists in node ${this.constructor.name}.`,
+      );
+    }
+    this.successors.set(action, node);
+    // If adding a successor to a node that is already part of a flow,
+    // propagate the flow reference to the new node and its downstream nodes.
+    if (this.flow) {
+      // Cast this.flow to a more general type if necessary for the helper call
+      (this.flow as Flow<any, any, any, any>).setFlowOnNode(node);
+    }
+    return node;
+  }
 
   /**
    * Connect this node to another node for the default action.
@@ -118,6 +126,7 @@ export abstract class BaseNode<
 
   /**
    * Prepare any data needed for execution.
+   * This is called once per node execution before execute.
    * @param shared Shared state
    * @param params Runtime params
    */
@@ -125,62 +134,79 @@ export abstract class BaseNode<
 
   /**
    * Execute the main logic of the node.
+   * This is called zero or more times (depending on batching/retries) after prepare.
    * @param prepResult Result from prepare()
+   * @param shared Shared state // <-- ADDED shared
    * @param params Runtime params
-   * @param attempt Attempt index (for retries)
+   * @param attempt Attempt index (0 for first try)
    */
   abstract execute(
     prepResult: PrepResult,
+    shared: S, // <-- ADDED shared state parameter
     params: P,
     attempt: number,
   ): Promise<ExecResult>;
 
   /**
-   * Finalize after execution, update shared state, and return action.
-   * @param shared Shared state
+   * Finalize after execution. Update shared state, and determine the next action.
+   * This is called once per node execution after execute (or executeItem batch).
+   * @param shared Shared state (potentially modified by execute)
    * @param prepResult Result from prepare()
-   * @param execResult Result from execute()
+   * @param execResult Result from execute() (or array of results for batch nodes)
    * @param params Runtime params
    */
   abstract finalize(
     shared: S,
     prepResult: PrepResult,
-    execResult: ExecResult,
+    execResult: ExecResult, // Note: For batch nodes, this is ExecResult[]
     params: P,
   ): Promise<Action>;
 
   /**
    * (Optional) For batch nodes: execute logic for a single item.
-   * @param item The item to process
+   * This is called for each item after prepare and before finalize.
+   * @param item The item to process (from prepare result)
+   * @param shared Shared state // <-- ADDED shared
    * @param params Runtime params
-   * @param attempt Attempt index (for retries)
+   * @param attempt Attempt index (0 for first try)
    */
-  async executeItem?(item: any, params: P, attempt: number): Promise<any>;
+  async executeItem?(
+    item: any,
+    shared: S,
+    params: P,
+    attempt: number,
+  ): Promise<any>; // <-- ADDED shared
 
   /**
    * (Optional) For batch nodes: fallback logic for a single item.
-   * @param item The item to process
+   * Called if `executeItem` fails after retries.
+   * @param item The item being processed
    * @param error The error encountered
+   * @param shared Shared state // <-- ADDED shared
    * @param params Runtime params
-   * @param attempt Attempt index
+   * @param attempt Attempt index of the failed execution
    */
   async executeItemFallback?(
     item: any,
     error: Error,
+    shared: S, // <-- ADDED shared
     params: P,
     attempt: number,
   ): Promise<any>;
 
   /**
-   * (Optional) For retry nodes: fallback logic for main execution.
+   * (Optional) Fallback logic for main execution (`execute`).
+   * Called if `execute` fails after retries (for non-batch nodes).
    * @param prepResult Result from prepare()
    * @param error The error encountered
+   * @param shared Shared state // <-- ADDED shared
    * @param params Runtime params
-   * @param attempt Attempt index
+   * @param attempt Attempt index of the failed execution
    */
   async executeFallback?(
     prepResult: PrepResult,
     error: Error,
+    shared: S, // <-- ADDED shared
     params: P,
     attempt: number,
   ): Promise<ExecResult>;

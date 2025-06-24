@@ -1,6 +1,6 @@
 {
   "name": "pocketmesh",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "A modern, type-safe, async-native framework for building agentic applications and A2A-compliant workflows in TypeScript.",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",

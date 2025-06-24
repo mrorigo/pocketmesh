@@ -4,6 +4,8 @@
  * All types are exported for developer use.
  */
 
+import { SharedState } from "../core";
+
 export type TaskState =
   | "submitted"
   | "working"
@@ -335,6 +337,24 @@ export type A2AResponse =
   | CancelTaskResponse
   | SetTaskPushNotificationResponse
   | GetTaskPushNotificationResponse;
+
+/**
+ * SharedState augmented with A2A-specific properties populated by the server handler.
+ * Nodes operating in an A2A context can expect these properties to be present.
+ * Your custom shared state interface should extend this if using A2ABaseNode.
+ */
+export interface A2ASharedState extends SharedState {
+  /** The full incoming A2A Message object received by the server handler. */
+  __a2a_incoming_message?: Message;
+  /** An array of Parts intended for the final A2A response message in tasks/send. */
+  __a2a_final_response_parts?: Part[];
+  /** @deprecated Use __a2a_incoming_message and access parts directly. Retained for backward compatibility with old shared.input convention.*/
+  input?: unknown; // Add back the old 'input' convention, typed as unknown for flexibility
+
+  // Add A2A history type hint if needed, although __a2a_history might be added by PocketMesh core depending on version
+  /** Conversation history managed by the A2A server handler. */
+  __a2a_history?: Message[];
+}
 
 // --- Utility: Type guard for Part ---
 

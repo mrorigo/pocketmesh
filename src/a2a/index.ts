@@ -2,6 +2,7 @@ export * from "./types";
 export * from "./agentCard";
 export * from "./server";
 export * from "./client";
+export * from "./basenode";
 
 /**
  * Helper to expose PocketMesh flows as an A2A agent.

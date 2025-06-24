@@ -4,15 +4,15 @@
  * Demonstrates parallel fetching, batch processing, and flow orchestration.
  */
 
- import {
-   ActionKey,
-   ActionResult,
-   BaseNode,
-   Flow,
-   Params,
-   SharedState,
-   sleep,
- } from "../index";
+import {
+  ActionKey,
+  ActionResult,
+  BaseNode,
+  Flow,
+  Params,
+  SharedState,
+  sleep,
+} from "../index";
 
 // --- Type Definitions ---
 type ItemParams = { itemId: string };
@@ -40,6 +40,7 @@ class FetchItemNode extends BaseNode<
   }
   async execute(
     _prep: void,
+    _shared: SharedState,
     params: ItemParams,
     attempt: number = 0,
   ): Promise<ItemResult> {
@@ -60,6 +61,7 @@ class FetchItemNode extends BaseNode<
   async executeFallback(
     _prep: void,
     error: Error,
+    _shared: SharedState,
     params: ItemParams,
     attempt: number,
   ): Promise<ItemResult> {
@@ -87,6 +89,7 @@ class ProcessItemsNode extends BaseNode<
   // Required abstract method for non-batch nodes (not used here, but must be present)
   async execute(
     _prep: string[],
+    _shared: SharedState,
     _params: ProcessParams,
     _attempt: number = 0,
   ): Promise<string[]> {
@@ -95,6 +98,7 @@ class ProcessItemsNode extends BaseNode<
   }
   async executeItem(
     item: string,
+    _shared: SharedState,
     params: ProcessParams,
     attempt: number,
   ): Promise<string> {
@@ -110,6 +114,7 @@ class ProcessItemsNode extends BaseNode<
   async executeItemFallback(
     item: string,
     error: Error,
+    _shared: SharedState,
     params: ProcessParams,
     attempt: number,
   ): Promise<string> {
@@ -138,6 +143,7 @@ class FinalizeNode extends BaseNode<SharedState, Params, string[], string> {
   }
   async execute(
     processedItems: string[],
+    _shared: SharedState,
     _params: Params,
     _attempt: number = 0,
   ): Promise<string> {
@@ -166,6 +172,7 @@ class HandleEmptyNode extends BaseNode {
   }
   async execute(
     _prep: void,
+    _shared: SharedState,
     _params: Params,
     _attempt: number = 0,
   ): Promise<void> {
@@ -208,7 +215,9 @@ class FetchBatchFlow extends Flow<
     console.log(
       `Flow Post: Parallel fetches completed. Collected ${Array.isArray(shared.items) ? shared.items.length : 0} results.`,
     );
-    return Array.isArray(shared.items) && shared.items.length > 0 ? "process_results" : "empty_batch";
+    return Array.isArray(shared.items) && shared.items.length > 0
+      ? "process_results"
+      : "empty_batch";
   }
   // The orchestrator will auto-detect batch/parallel/retry based on node options and methods.
 }

@@ -14,6 +14,7 @@ export class GetQuestionNode extends BaseNode<QASharedState> {
   }
   async execute(
     _prep: void,
+    _shared: SharedState,
     _runtimeParams: Params,
     _attemptIndex?: number,
   ): Promise<string> {
@@ -50,6 +51,7 @@ export class AnswerNode extends BaseNode<
   }
   async execute(
     question: string,
+    _shared: SharedState,
     _runtimeParams: Params,
     attemptIndex?: number,
   ): Promise<string> {
