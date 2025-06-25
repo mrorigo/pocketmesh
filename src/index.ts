@@ -5,3 +5,4 @@ export * from "./core";
 export * from "./a2a";
 export * from "./utils/persistence";
 export * from "./utils/retry";
+export * from "./a2a/basenode";

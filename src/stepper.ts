@@ -68,8 +68,6 @@ export class FlowStepper<
     // Ensure the flow instance inside the stepper has its .flow property set to itself (the stepper manages it)
     // This is slightly different from the Flow.orchestrate setting the parent flow.
     // The stepper itself *is* the orchestrator in this context.
-    // Let's add a property to BaseNode like `orchestrator` or similar?
-    // Or perhaps Stepper sets `node.flow = this`? Yes, FlowStepper effectively acts as the 'Flow' for the nodes it steps through.
     // We need to call the same `setFlowOnNode` logic as in the Flow constructor.
     (this.flow as Flow<any, any, any, any>).setFlowOnNode(this.flow.startNode); // Set flow property on nodes
   }

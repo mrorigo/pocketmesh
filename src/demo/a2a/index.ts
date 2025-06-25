@@ -2,7 +2,6 @@ import express from "express";
 import bodyParser from "body-parser";
 import compression from "compression";
 import { generateAgentCard } from "../../a2a/agentCard.js";
-import { handleA2ARequest } from "../../a2a/server.js";
 import { createA2AClient } from "../../a2a/client.js";
 import type {
   AgentSkill,
@@ -11,6 +10,7 @@ import type {
   Artifact,
 } from "../../a2a/types.js";
 import { Flow, BaseNode, SharedState, Params } from "../../index.js";
+import { handleA2ARequest } from "../../a2a/server/handlers.js";
 
 // --- Demo PocketMesh flow: EchoSkill with artifact and progress ---
 class EchoNode extends BaseNode<SharedState, Params, string, any> {
