@@ -495,7 +495,7 @@ export class Flow<
    */
   async finalize(
     _shared: S,
-    flowPrepResult: any,
+    _flowPrepResult: any,
     _execResult: null,
     _params: P,
   ): Promise<Action> {

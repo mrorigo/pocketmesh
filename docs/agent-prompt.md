@@ -1,12 +1,12 @@
 ---
 layout: default
-title: "Agentic Coding (TypeScript) — PocketMesh + A2A v2.0"
+title: "Agentic Coding (TypeScript) — PocketMesh + A2A"
 ---
 
-# Agentic Coding: Humans Design, Agents Code! (PocketMesh + A2A v2.0 Edition)
+# Agentic Coding: Humans Design, Agents Code! (PocketMesh + A2A Edition)
 
 > **If you are an AI agent or developer building LLM systems with the TypeScript PocketMesh framework, this is your gold-standard guide.**
-> Follow these best practices to build robust, interoperable, and multi-agent systems using PocketMesh v2.0 and the Agent2Agent (A2A) protocol.
+> Follow these best practices to build robust, interoperable, and multi-agent systems using PocketMesh v0.2.0 and the Agent2Agent (A2A) protocol.
 
 ---
 
@@ -41,11 +41,11 @@ With **native A2A protocol support**, PocketMesh can expose its flows as open, d
 
 PocketMesh is modular, robust, and designed for reliability and extensibility. It features strict type safety, runtime validation, dependency injection for persistence and protocol layers, and comprehensive error handling and logging.
 
-This guide covers **agentic coding best practices** and how to leverage A2A for multi-agent, multi-framework workflows, with details matching the v2.0 implementation.
+This guide covers **agentic coding best practices** and how to leverage A2A for multi-agent, multi-framework workflows, with details matching the v0.2.0 implementation.
 
 ---
 
-## Agentic Coding Steps (PocketMesh + A2A v2.0)
+## Agentic Coding Steps (PocketMesh + A2A)
 
 | Step                  | Human      | AI        | Comment                                                                 |
 |:----------------------|:----------:|:---------:|:------------------------------------------------------------------------|
@@ -63,7 +63,7 @@ This guide covers **agentic coding best practices** and how to leverage A2A for 
 
 - **Clarify the problem and user needs.**
 - Decide if your agent should be discoverable and callable by other agents (A2A server), or if it should call out to other agents (A2A client), or both.
-- **A2A Use Cases (v2.0):**
+- **A2A Use Cases:**
   - Expose your agent’s skills using standard A2A `tasks/*` methods (A2A server).
   - Compose multi-agent workflows by calling other A2A agents (A2A client).
   - Interoperate with other frameworks (Google, OpenAI, CrewAI, LangGraph, etc.) that support A2A.
@@ -73,7 +73,7 @@ This guide covers **agentic coding best practices** and how to leverage A2A for 
 ### 2. **Flow Design**
 
 - **Outline your agentic workflow** using PocketMesh’s modular node/flow abstractions.
-- **For A2A (v2.0):**
+- **For A2A:**
   - Each skill you want to expose must be a PocketMesh flow.
   - Each skill must be described in your AgentCard and registered in the `flows` map, keyed by skillId.
 - **Design for multi-turn:**
@@ -128,17 +128,17 @@ flowchart LR
 
 ### 4. **Node Design**
 
-- **Base Class Selection (v2.0):**
+- **Base Class Selection:**
   - Nodes that handle A2A *input messages* (accessing parts) or set A2A *output messages* (for `tasks/send` responses) **must** inherit from `A2ABaseNode`.
   - Nodes that only perform internal computation or call *out* to other services/agents without needing specific incoming message parsing or outgoing message formatting helpers can inherit from `BaseNode`.
 - **Shared State:**
   - Use `SharedState` (a strongly-typed object) to persist all relevant data throughout the flow run.
-  - **A2A Integration (v2.0):** The A2A server handler automatically populates A2A-specific information into `shared` state before running a node's lifecycle methods:
+  - **A2A Integration:** The A2A server handler automatically populates A2A-specific information into `shared` state before running a node's lifecycle methods:
       - `shared.__a2a_history`: The full array of messages in the conversation for this task.
       - `shared.__a2a_incoming_message`: The specific `Message` object from the current client request.
       - `shared.__a2a_final_response_parts`: An array where `A2ABaseNode` nodes can store the `Part[]` array for the final `tasks/send` response message.
-  - **Accessing A2A Data in Nodes (v2.0):** Use the protected helper methods on `A2ABaseNode` to access the incoming message and its parts safely (`this.getIncomingMessage(shared)`, `this.getIncomingData(shared)`, etc.).
-  - **Setting A2A Output in Nodes (v2.0):** Use the protected helper methods on `A2ABaseNode` (`this.setFinalResponseParts(shared, parts)`, `this.setFinalResponseData(shared, data)`) to define the content of the message returned in the `tasks/send` response.
+  - **Accessing A2A Data in Nodes:** Use the protected helper methods on `A2ABaseNode` to access the incoming message and its parts safely (`this.getIncomingMessage(shared)`, `this.getIncomingData(shared)`, etc.).
+  - **Setting A2A Output in Nodes:** Use the protected helper methods on `A2ABaseNode` (`this.setFinalResponseParts(shared, parts)`, `this.setFinalResponseData(shared, data)`) to define the content of the message returned in the `tasks/send` response.
 - **Parameters:**
   - Use `Params` for node/flow configuration and runtime overrides that *don't* come directly from the A2A message body (e.g., model names, API keys, flags).
 - **Multi-turn:**
@@ -149,7 +149,7 @@ flowchart LR
 
 ### 5. **Implementation**
 
-#### **A2A Server (Expose Flows as Skills - v2.0)**
+#### **A2A Server (Expose Flows as Skills)**
 
 1.  **Define your skills as flows, using `A2ABaseNode` where A2A I/O is needed:**
     ```typescript
@@ -218,8 +218,8 @@ flowchart LR
     const agentCard = generateAgentCard({
       name: "My Agent",
       url: "https://myagent.com/a2a",
-      version: "2.0.0",
-      description: "My awesome agent built with PocketMesh v2.0",
+      version: "1.0.0",
+      description: "My awesome agent built with PocketMesh v0.2.0",
       skills: [
         {
           id: "my-skill",
@@ -305,7 +305,7 @@ flowchart LR
 
         console.log("Remote agent response:", JSON.stringify(response, null, 2));
 
-        // --- v2.0.0: Extract response from the agent's message parts ---
+        // --- v0.2.0: Extract response from the agent's message parts ---
         const remoteAgentMessage = response.result?.status?.message;
         const extractedResults: any = {};
 
@@ -348,9 +348,9 @@ flowchart LR
     ```
     *Note: If `CallOtherAgentNode` also needs to act as an A2A agent endpoint (e.g., is part of a flow used by `a2aServerHandler`), it should extend `A2ABaseNode` and use its helpers for *its own* inputs/outputs.*
 
-#### **Artifact Emission (v2.0)**
+#### **Artifact Emission**
 
-- To emit an artifact (file, data, etc.) from a node, use the `emitArtifact` protected helper method on `A2ABaseNode`. This is the preferred way in v2.0+. The A2A server handler listens for these calls during `tasks/sendSubscribe` requests and sends them as `TaskArtifactUpdateEvent`s.
+- To emit an artifact (file, data, etc.) from a node, use the `emitArtifact` protected helper method on `A2ABaseNode`. This is the preferred way in v0.2.0+. The A2A server handler listens for these calls during `tasks/sendSubscribe` requests and sends them as `TaskArtifactUpdateEvent`s.
   ```typescript
   // Assume MyNode extends A2ABaseNode
   import { A2ABaseNode } from "pocketmesh/dist/a2a/A2ABaseNode";
@@ -403,7 +403,7 @@ flowchart LR
 
 ---
 
-#### **Persistence and Multi-turn (v2.0)**
+#### **Persistence and Multi-turn**
 
 - **PocketMesh’s A2A server implementation persists all task state, history, and artifacts in SQLite (`pocketmesh.sqlite`) by default.** This includes the `SharedState` object for every step.
 - **A2A `taskId` is mapped to a persistent `runId` internally.**
@@ -416,7 +416,7 @@ flowchart LR
 
 ---
 
-### Pluggable Persistence Layer (v2.0)
+### Pluggable Persistence Layer
 
 PocketMesh allows you to use your own persistence backend by implementing the `Persistence` interface.
 
@@ -547,7 +547,7 @@ my_project/
 
 ---
 
-## Production-Quality Streaming Client Example (v2.0)
+## Production-Quality Streaming Client Example
 
 To receive real-time progress and artifact events from an A2A agent using `tasks/sendSubscribe`, use the `createA2AClient` and `sendSubscribe` methods with robust event and error handling.
 **Requires [`undici`](https://www.npmjs.com/package/undici) for Node.js streaming fetch.**
@@ -588,7 +588,7 @@ await new Promise<void>((resolve, reject) => {
         console.log("Event Type: Status Update");
         console.log(`Status: ${event.status.state}`);
         if (event.status.message?.parts) {
-            // Check for structured message parts in status updates (v2.0+)
+            // Check for structured message parts in status updates
             event.status.message.parts.forEach(part => {
                 if (isTextPart(part)) console.log("  Status Text:", part.text);
                 if (isDataPart(part)) console.log("  Status Data:", part.data);
@@ -607,7 +607,7 @@ await new Promise<void>((resolve, reject) => {
         console.log("Event Type: Artifact Update");
         console.log(`Artifact: ${event.artifact.name || 'Unnamed Artifact'}`);
         if (event.artifact.parts) {
-             // Check for structured message parts within the artifact (v2.0+)
+             // Check for structured message parts within the artifact
              event.artifact.parts.forEach(part => {
                  if (isTextPart(part)) console.log("  Artifact Text:", part.text);
                  if (isDataPart(part)) console.log("  Artifact Data:", part.data);
@@ -639,7 +639,7 @@ console.log("\nStreaming process concluded.");
 **Notes:**
 - The `sendSubscribe` method initiates a `tasks/sendSubscribe` JSON-RPC call and processes the Server-Sent Events (SSE) response stream.
 - The callback receives each `TaskStatusUpdateEvent` or `TaskArtifactUpdateEvent` as soon as it is emitted by the server.
-- In v2.0, status updates and artifacts can contain `data` or `file` parts, which you should check for in your client handling logic.
+- In v0.2.0, status updates and artifacts can contain `data` or `file` parts, which you should check for in your client handling logic.
 - The returned `close` function aborts the stream.
 - The client suppresses the expected `AbortError` on normal close.
 - You must `npm install undici` for Node.js streaming support.
