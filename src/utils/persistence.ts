@@ -23,6 +23,8 @@ export interface Persistence {
   mapA2ATaskToRun(taskId: string, runId: number): void;
   getRunIdForA2ATask(taskId: string): number | undefined;
   deleteA2ATask(taskId: string): void;
+  saveTaskSnapshot(taskId: string, snapshot: Record<string, unknown>): void;
+  getTaskSnapshot(taskId: string): Record<string, unknown> | undefined;
 }
 
 export interface RunRecord {
@@ -76,6 +78,13 @@ CREATE TABLE IF NOT EXISTS a2a_tasks (
   task_id TEXT PRIMARY KEY,
   run_id INTEGER NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS a2a_task_snapshots (
+  task_id TEXT PRIMARY KEY,
+  task_json TEXT NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(task_id) REFERENCES a2a_tasks(task_id) ON DELETE CASCADE
 );
 `);
 
@@ -136,6 +145,24 @@ export const sqlitePersistence: Persistence = {
     return row ? row.run_id : undefined;
   },
   deleteA2ATask(taskId: string) {
+    db.prepare("DELETE FROM a2a_task_snapshots WHERE task_id = ?").run(taskId);
     db.prepare("DELETE FROM a2a_tasks WHERE task_id = ?").run(taskId);
+  },
+  saveTaskSnapshot(taskId: string, snapshot: Record<string, unknown>) {
+    db.prepare(
+      `
+        INSERT INTO a2a_task_snapshots (task_id, task_json, updated_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(task_id) DO UPDATE SET task_json = excluded.task_json, updated_at = CURRENT_TIMESTAMP
+      `,
+    ).run(taskId, JSON.stringify(snapshot));
+  },
+  getTaskSnapshot(taskId: string): Record<string, unknown> | undefined {
+    const row = db
+      .prepare(
+        "SELECT task_json FROM a2a_task_snapshots WHERE task_id = ? LIMIT 1",
+      )
+      .get(taskId) as { task_json: string } | undefined;
+    return row ? (JSON.parse(row.task_json) as Record<string, unknown>) : undefined;
   }
 };

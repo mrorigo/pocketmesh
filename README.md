@@ -9,6 +9,15 @@
 **Build powerful, type-safe, async-native agentic workflows in TypeScript—**
 **with first-class [A2A protocol](https://google.github.io/A2A/) support for open, interoperable agent APIs.**
 
+> **PocketMesh 0.3.0 highlights**
+> - Migrated to the official [`@a2a-js/sdk`](https://www.npmjs.com/package/@a2a-js/sdk) for servers, clients, and streaming—no internal fork required.
+> - New `createPocketMeshA2AServer` helper and SQLite-backed `PocketMeshTaskStore` integrate PocketMesh flows with the SDK's `DefaultRequestHandler`.
+> - Async `createA2AClient` wrapper returns the SDK client (`sendMessage`, `sendMessageStream`, `cancelTask`, …).
+> - Expanded Jest coverage (including failure branches and persistence) and refreshed documentation.
+> - Extensive developer documentation added, see [`docs/developer/index.md`](./docs/developer/index.md)
+>
+> See [`docs/MIGRATION_TO_0.3.md`](./docs/MIGRATION_TO_0.3.md) for upgrade guidance from v0.2.x.
+
 ---
 
 > **Inspired by [PocketFlow](https://github.com/The-Pocket/PocketFlow):**
@@ -48,7 +57,7 @@ import { Flow, BaseNode } from "pocketmesh";
 
 class HelloNode extends BaseNode {
   async prepare(_shared, params) { return params.name ?? "World"; }
-  async execute(name) { return `Hello, ${name}!`; }
+  async execute(name, _shared, _params, _attempt) { return `Hello, ${name}!`; }
   async finalize(shared, _prep, execResult) {
     shared.greeting = execResult;
     return "default";
@@ -73,7 +82,7 @@ import { Flow, BaseNode, ActionKey, SharedState } from "pocketmesh";
 // Node 1: Greet the user
 class GreetNode extends BaseNode {
   async prepare(_shared, params) { return params.name ?? "World"; }
-  async execute(name) { return `Hello, ${name}!`; }
+  async execute(name, _shared, _params, _attempt) { return `Hello, ${name}!`; }
   async finalize(shared, _prep, execResult) {
     shared.greeting = execResult;
     return "default";
@@ -83,7 +92,7 @@ class GreetNode extends BaseNode {
 // Node 2: Branch based on a flag
 class BranchNode extends BaseNode {
   async prepare(shared) { return shared.greeting; }
-  async execute(greeting, params) {
+  async execute(greeting, _shared, params, _attempt) {
     return params.shout ? "shout" : "echo";
   }
   async finalize(_shared, _prep, action) { return action; }
@@ -92,7 +101,7 @@ class BranchNode extends BaseNode {
 // Node 3a: Echo the greeting
 class EchoNode extends BaseNode {
   async prepare(shared) { return shared.greeting; }
-  async execute(greeting) { return greeting; }
+  async execute(greeting, _shared, _params, _attempt) { return greeting; }
   async finalize(shared, _prep, execResult) {
     shared.result = execResult;
     return ActionKey.Default;
@@ -103,7 +112,7 @@ class EchoNode extends BaseNode {
 class ShoutBatchNode extends BaseNode {
   async prepare(shared) { return [shared.greeting, shared.greeting]; }
   async execute() { throw new Error("Not used in batch node"); }
-  async executeItem(item) { return item.toUpperCase(); }
+  async executeItem(item, _shared, _params, _attempt) { return item.toUpperCase(); }
   async finalize(shared, _prep, execResults) {
     shared.result = execResults.join(" ");
     return ActionKey.Default;
@@ -142,34 +151,53 @@ console.log(shared.result); // "HELLO, ALICE! HELLO, ALICE!"
 ## Expose Your Flow as an A2A Agent
 
 ```ts
-import { generateAgentCard } from "pocketmesh/a2a";
+import {
+  generateAgentCard,
+  createPocketMeshA2AServer,
+  a2aServerHandler,
+} from "pocketmesh/a2a";
 
 const agentCard = generateAgentCard({
   name: "Advanced Agent",
-  url: "http://localhost:4000/a2a",
+  url: "http://localhost:4000",
   version: "1.0.0",
   skills: [
-    { id: "greet", name: "Greet", description: "Greets and optionally shouts", inputModes: ["text"], outputModes: ["text"] }
+    {
+      id: "greet",
+      name: "Greet",
+      description: "Greets and optionally shouts",
+      inputModes: ["text"],
+      outputModes: ["text", "file"],
+      tags: ["demo"],
+      examples: ["Say hi to Alice"],
+    },
   ],
-  capabilities: { streaming: true, pushNotifications: false }
+  capabilities: { streaming: true, pushNotifications: false },
 });
 ```
 
 ```ts
 import express from "express";
-import { a2aServerHandler } from "pocketmesh/a2a";
-
 const app = express();
 app.use(express.json());
-app.get("/.well-known/agent.json", (_req, res) => res.json(agentCard));
-app.post("/a2a", a2aServerHandler({ flows: { greet: flow }, agentCard }));
 
-app.listen(4000, () => console.log("A2A agent running at http://localhost:4000"));
+// Serve the agent card
+app.get("/.well-known/agent-card.json", (_req, res) => res.json(agentCard));
+
+// Register all A2A routes (JSON-RPC + streaming) via the SDK
+a2aServerHandler({
+  flows: { greet: flow },
+  agentCard,
+})(app, "/a2a");
+
+app.listen(4000, () =>
+  console.log("A2A agent running at http://localhost:4000"),
+);
 ```
 
-> **Note:** For batch nodes (those implementing `executeItem`), you must still implement a dummy `execute` method to satisfy TypeScript's abstract class requirements:
+> **Note:** For batch nodes (those implementing `executeItem`), you must still implement a dummy `execute` method to satisfy TypeScript's abstract class requirements. The `execute` method now receives `shared` state as a parameter:
 > ```ts
-> async execute() { throw new Error("Not used in batch node"); }
+> async execute(_prep, _shared, _params, _attempt) { throw new Error("Not used in batch node"); }
 > ```
 
 ---
@@ -179,55 +207,58 @@ app.listen(4000, () => console.log("A2A agent running at http://localhost:4000")
 You can call any remote A2A-compliant agent as part of your workflow:
 
 ```ts
-import { createA2AClient } from "pocketmesh/a2a";
+import { randomUUID } from "crypto";
 import { BaseNode } from "pocketmesh";
+import { createA2AClient } from "pocketmesh/a2a";
 
 class CallOtherAgentNode extends BaseNode {
   async execute(_prep, params) {
-    const a2a = createA2AClient("https://other-agent.com/a2a");
-    const resp = await a2a.sendTask("my-task-id", {
-      role: "user",
-      parts: [{ type: "text", text: params.input }]
-    }, "skillId");
-    return resp.result?.status?.message?.parts[0]?.text;
+    const client = await createA2AClient("https://other-agent.example.com");
+    const response = await client.sendMessage({
+      message: {
+        kind: "message",
+        role: "user",
+        messageId: randomUUID(),
+        parts: [{ kind: "text", text: params.input }],
+        metadata: { skillId: "remote-skill" },
+      },
+      configuration: { blocking: true },
+    });
+    return response.result?.parts?.[0]?.text;
   }
 }
 ```
+
+> `createA2AClient` resolves the official SDK client. All JSON-RPC methods exposed by `@a2a-js/sdk` (`sendMessage`, `sendMessageStream`, `getTask`, `cancelTask`, `setTaskPushNotificationConfig`, …) are available.
 
 ---
 
 ## Streaming & Artifacts (A2A SSE)
 
-PocketMesh supports real-time streaming of progress and artifact events via SSE, fully compliant with A2A.
+PocketMesh supports real-time streaming of progress and artifact events via SSE using the SDK's async generators.
 
 ```ts
+import { randomUUID } from "crypto";
 import { createA2AClient } from "pocketmesh/a2a";
 
-const client = createA2AClient("http://localhost:4000/a2a");
-const taskId = "my-streaming-task";
-const message = {
-  role: "user",
-  parts: [{ type: "text", text: "Hello, stream!" }],
-};
+const client = await createA2AClient("http://localhost:4000");
 
-await new Promise<void>((resolve, reject) => {
-  const close = client.sendSubscribe(
-    taskId,
-    message,
-    "echo",
-    (event) => {
-      console.log("STREAM EVENT:", event);
-      if ("status" in event && event.status?.state === "completed") {
-        close();
-        setTimeout(resolve, 100);
-      }
-    },
-    (err) => {
-      console.error("Streaming error:", err);
-      reject(err);
-    }
-  );
+const stream = client.sendMessageStream({
+  message: {
+    kind: "message",
+    messageId: randomUUID(),
+    taskId: randomUUID(),
+    contextId: randomUUID(),
+    role: "user",
+    metadata: { skillId: "greet" },
+    parts: [{ kind: "text", text: "Hello, stream!" }],
+  },
+  configuration: { blocking: false },
 });
+
+for await (const event of stream) {
+  console.log("STREAM EVENT:", event);
+}
 ```
 
 ---
@@ -286,14 +317,16 @@ pocketmesh/
 │   │   ├── retry.ts        # Retry utility
 │   │   └── persistence.ts  # Persistence (default: SQLite, pluggable)
 │   └── a2a/
-│       ├── index.ts        # A2A integration
-│       ├── agentCard.ts    # AgentCard utilities
-│       ├── client.ts       # A2A client
-│       ├── server.ts       # A2A server
-│       ├── types.ts        # A2A protocol types
-│       └── validation.ts   # Zod validation schemas
+│       ├── index.ts               # Glue between PocketMesh flows and @a2a-js/sdk
+│       ├── agentCard.ts           # AgentCard utilities
+│       ├── client.ts              # Async SDK client wrapper
+│       ├── PocketMeshExecutor.ts  # Bridges Flow events to the SDK event bus
+│       ├── PocketMeshTaskStore.ts # SQLite-backed TaskStore implementation
+│       └── types.ts               # Re-exported A2A protocol types & helpers
 ├── docs/
-│   └── agent-prompt.md     # Agentic coding guide (for LLMs & AI agents!)
+│   ├── agent-prompt.md     # Agentic coding guide (for LLMs & AI agents!)
+│   ├── MIGRATION_TO_0.2.md
+│   └── MIGRATION_TO_0.3.md
 ├── package.json
 ├── tsconfig.json
 └── pocketmesh.sqlite       # Persistent state (auto-created)
@@ -311,7 +344,8 @@ npm test
 ```
 
 - Tests are located in `__tests__/`.
-- All core abstractions are covered: single-node, multi-node, batch, and retry/fallback flows.
+- All core abstractions are covered: single-node, multi-node, batch, retry/fallback flows, A2A server/client integration, and persistence.
+- Generate coverage reports with `npm test -- --coverage` (enabled by default in Jest config).
 
 ---
 
@@ -319,6 +353,7 @@ npm test
 
 - [A2A Protocol Spec](https://google.github.io/A2A/)
 - [Agentic Coding Guide (Prompt for LLMs/Agents)](./docs/agent-prompt.md)
+- [Migration to 0.3.0 (official A2A SDK integration)](./docs/MIGRATION_TO_0.3.md)
 - [PocketMesh Example Flows](./src/demo/)
 - [PocketMesh A2A Demo](./src/demo/a2a/index.ts)
 - [PocketFlow (Python, original inspiration)](https://github.com/The-Pocket/PocketFlow)

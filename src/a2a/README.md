@@ -11,20 +11,15 @@ PocketMesh's Flow now supports real-time streaming of progress and artifacts via
 
 ### Artifact Events
 
-- To emit an artifact (file, data, etc.) from a node, return an object with a `__a2a_artifact` property from your `execute` or `executeItem` method:
+- To emit an artifact (file, data, etc.) from a node, call the protected helper `this.emitArtifact({ ... })` from within an `A2ABaseNode`:
     ```typescript
-    async execute(prep, params) {
-      // ... your logic ...
-      return {
-        result: "some result",
-        __a2a_artifact: {
-          name: "output.txt",
-          parts: [{ type: "text", text: "Artifact content" }]
-        }
-      };
-    }
+    this.emitArtifact({
+      artifactId: uuidv4(),
+      name: "output.txt",
+      parts: [{ kind: "text", text: "Artifact content" }]
+    });
     ```
-- The A2A server will emit a `TaskArtifactUpdateEvent` for each artifact.
+- The A2A server publishes a `TaskArtifactUpdateEvent` for every artifact emitted during execution.
 
 ### Example: Streaming SSE from the Server
 
@@ -34,12 +29,20 @@ PocketMesh's Flow now supports real-time streaming of progress and artifacts via
 ### Example: Client Usage
 
 ```typescript
-const client = createA2AClient("http://localhost:4000/a2a");
-const close = client.sendSubscribe(
-  "task-123",
-  { role: "user", parts: [{ type: "text", text: "Hello!" }] },
-  "echo",
-  (event) => { console.log("SSE event:", event); }
-);
-// ... later: close();
+const client = await createA2AClient("http://localhost:4000");
+
+for await (const event of client.sendMessageStream({
+  message: {
+    kind: "message",
+    messageId: uuidv4(),
+    taskId: "task-123",
+    contextId: uuidv4(),
+    role: "user",
+    metadata: { skillId: "echo" },
+    parts: [{ kind: "text", text: "Hello!" }]
+  },
+  configuration: { blocking: false }
+})) {
+  console.log("Stream event:", event);
+}
 ```

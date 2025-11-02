@@ -1,8 +1,22 @@
 import type { SharedState, Params, ActionResult } from "./types";
-import { BaseNode } from "./node"; // Keep import for BaseNode
-import { retryAsync } from "../utils/retry"; // Keep import for retryAsync
-import { logger } from "../utils/logger"; // Keep import for logger
-import { toAsyncIterable } from "./utils"; // Keep import for toAsyncIterable
+import { BaseNode, type FlowContext } from "./node";
+import { retryAsync } from "../utils/retry";
+import { logger } from "../utils/logger";
+import { toAsyncIterable } from "./utils";
+
+const isIterableLike = (
+  value: unknown,
+): value is AsyncIterable<unknown> | Iterable<unknown> => {
+  if (value == null) return false;
+  const candidate = value as {
+    [Symbol.iterator]?: () => Iterator<unknown>;
+    [Symbol.asyncIterator]?: () => AsyncIterator<unknown>;
+  };
+  return (
+    typeof candidate[Symbol.iterator] === "function" ||
+    typeof candidate[Symbol.asyncIterator] === "function"
+  );
+};
 
 /**
  * Flow: Orchestrates execution of nodes, supports batch/parallel/retry.
@@ -19,9 +33,15 @@ import { toAsyncIterable } from "./utils"; // Keep import for toAsyncIterable
 export class Flow<
   S extends SharedState = SharedState,
   P extends Params = Params,
-  StartNode extends BaseNode<S, any, any, any, any> = BaseNode<S>, // Updated generic bounds for shared state
   Action extends ActionResult = ActionResult,
-> extends BaseNode<S, P, any, null, Action> {
+  StartNode extends BaseNode<S, any, unknown, unknown, Action> = BaseNode<
+    S,
+    any,
+    unknown,
+    unknown,
+    Action
+  >,
+> extends BaseNode<S, P, unknown, null, Action> implements FlowContext<S, Action> {
   /**
    * The start node of the flow.
    */
@@ -42,7 +62,7 @@ export class Flow<
   /**
    * Event hook: called when an artifact is emitted.
    */
-  public onArtifact?: (artifact: any) => void; // Use any for flexibility, server handler will validate A2A format
+  public onArtifact?: (artifact: unknown) => void; // Use unknown for flexibility, server handler will validate A2A format
 
   /**
    * Construct a new Flow.
@@ -63,12 +83,13 @@ export class Flow<
    * @param visited Set of nodes already visited during traversal.
    */
   public setFlowOnNode(
-    node: BaseNode<any, any, any, any, any> | null,
-    visited: Set<BaseNode<any, any, any, any, any>> = new Set(),
+    node: BaseNode<S, any, unknown, unknown, Action> | null,
+    visited: Set<BaseNode<S, any, unknown, unknown, Action>> = new Set<
+      BaseNode<S, any, unknown, unknown, Action>
+    >(),
   ): void {
     if (!node || visited.has(node)) return;
-    // Cast node to ensure shared state type compatibility if needed, or use 'any'
-    node.flow = this as any; // Cast 'this' to any Flow type to avoid strict generic issues here
+    node.flow = this;
     visited.add(node);
     // Recursively call for all successors
     for (const succ of node.getSuccessors().values()) {
@@ -83,9 +104,9 @@ export class Flow<
    * @returns The next node or null if flow is done
    */
   protected getNextNode(
-    currentNode: BaseNode<any, any, any, any, any>,
+    currentNode: BaseNode<S, any, unknown, unknown, Action>,
     action: ActionResult,
-  ): BaseNode<any, any, any, any, any> | null {
+  ): BaseNode<S, any, unknown, unknown, Action> | null {
     // Ensure action is treated as a string key
     const effectiveAction = (action ?? "default") as string;
     const successors = currentNode.getSuccessors();
@@ -108,18 +129,20 @@ export class Flow<
    * @param params Runtime params
    */
   protected async orchestrate(shared: S, params: P): Promise<void> {
-    let currentNode: BaseNode<S, P, any, any, Action> | null = this.startNode; // Use more specific generic bounds
+    let currentNode: BaseNode<S, any, unknown, unknown, Action> | null =
+      this.startNode;
     let step = 0;
     // TODO: Calculate total steps if needed for onStatusUpdate
     let totalSteps = 0;
 
     while (currentNode) {
-      const nodeToRun: BaseNode<S, P, any, any, Action> = currentNode; // Ensure correct type
+      const nodeToRun: BaseNode<S, any, unknown, unknown, Action> =
+        currentNode;
       const nodeName = nodeToRun.constructor.name;
       // Merge flow-level default params with node-level default params and runtime params
       const finalParams: P = {
         ...this.defaultParams,
-        ...nodeToRun["defaultParams"],
+        ...(nodeToRun as any)["defaultParams"],
         ...params,
       };
 
@@ -148,7 +171,7 @@ export class Flow<
       const parallel = nodeToRun.options.parallel ?? false;
 
       let actionResult: ActionResult;
-      let prepResult: any = undefined; // Initialize prepResult outside try for finalize scope
+      let prepResult: unknown = undefined; // Initialize prepResult outside try for finalize scope
 
       try {
         // --- 1. Prepare ---
@@ -166,9 +189,14 @@ export class Flow<
 
         if (isBatchNode) {
           // --- Batch or Parallel Batch Node Execution ---
-          const items: any[] = [];
+          const items: unknown[] = [];
           try {
             // Ensure prepResult is iterable and collect items
+            if (!isIterableLike(prepResult)) {
+              throw new TypeError(
+                `[Flow] Batch node ${nodeName} prepare() must return an Iterable or AsyncIterable.`,
+              );
+            }
             for await (const item of toAsyncIterable(prepResult))
               items.push(item);
           } catch (iterErr) {
@@ -184,7 +212,7 @@ export class Flow<
             throw iterErr;
           }
 
-          const processItem = async (item: any, idx: number) => {
+          const processItem = async (item: unknown, idx: number) => {
             // Pass current shared state to the status update hook
             this.onStatusUpdate?.({
               node: nodeName,
@@ -195,7 +223,7 @@ export class Flow<
               shared, // Pass the current shared state
             });
             try {
-              const result: any = await retryAsync(
+              const result: unknown = await retryAsync(
                 // Pass shared state to executeItem
                 (attempt) =>
                   nodeToRun.executeItem!(item, shared, finalParams, attempt), // <-- PASSING SHARED HERE
@@ -223,7 +251,7 @@ export class Flow<
                 "__a2a_artifact" in result
               ) {
                 this.onArtifact?.(
-                  (result as { __a2a_artifact: any }).__a2a_artifact,
+                  (result as { __a2a_artifact: unknown }).__a2a_artifact,
                 );
               }
               return result;
@@ -242,7 +270,7 @@ export class Flow<
             }
           };
 
-          let results: any[];
+          let results: unknown[];
           if (parallel) {
             // Parallel processing
             try {
@@ -291,7 +319,7 @@ export class Flow<
           );
         } else {
           // --- Normal Node Execution (non-batch) ---
-          let execResult: any = undefined; // Initialize execResult outside try for finalize scope
+          let execResult: unknown = undefined; // Initialize execResult outside try for finalize scope
           try {
             execResult = await retryAsync(
               // Pass shared state to execute
@@ -302,7 +330,7 @@ export class Flow<
               hasExecuteFallback
                 ? (error, attempt) =>
                     // Pass shared state to executeFallback
-                    (nodeToRun as any).executeFallback(
+                    nodeToRun.executeFallback!(
                       prepResult,
                       error,
                       shared, // <-- PASSING SHARED HERE
@@ -330,7 +358,7 @@ export class Flow<
             "__a2a_artifact" in execResult
           ) {
             this.onArtifact?.(
-              (execResult as { __a2a_artifact: any }).__a2a_artifact,
+              (execResult as { __a2a_artifact: unknown }).__a2a_artifact,
             );
           }
 
@@ -400,7 +428,7 @@ export class Flow<
    * @param attempt Attempt index
    */
   override async execute(
-    prepResult: any,
+    prepResult: unknown,
     shared: S,
     params: P,
     attempt: number,
@@ -422,7 +450,7 @@ export class Flow<
 
     // --- 1. Flow Prepare ---
     // Note: Flow's prepare is called once before orchestration begins
-    let flowPrepResult: any = undefined;
+    let flowPrepResult: unknown = undefined;
     try {
       flowPrepResult = await this.prepare(shared, finalParams);
     } catch (prepErr) {
@@ -481,7 +509,7 @@ export class Flow<
    * @param shared Shared state
    * @param params Runtime params
    */
-  async prepare(_shared: S, _params: P): Promise<any> {
+  async prepare(_shared: S, _params: P): Promise<unknown> {
     return undefined;
   }
 
@@ -495,7 +523,7 @@ export class Flow<
    */
   async finalize(
     _shared: S,
-    _flowPrepResult: any,
+    _flowPrepResult: unknown,
     _execResult: null,
     _params: P,
   ): Promise<Action> {
