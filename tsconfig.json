@@ -11,7 +11,12 @@
     "declaration": true,
     "declarationDir": "./dist",
     "sourceMap": true,
-    "types": ["jest", "node"]
+    "types": ["jest", "node"],
+    "baseUrl": ".",
+    "paths": {
+      "@a2a-js/sdk": ["node_modules/@a2a-js/sdk/dist/index"],
+      "@a2a-js/sdk/*": ["node_modules/@a2a-js/sdk/dist/*"]
+    }
   },
   "include": [
     "src/**/*",

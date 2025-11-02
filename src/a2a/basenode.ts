@@ -5,9 +5,10 @@ import type {
   DataPart,
   Artifact,
   FilePart,
-  FileContent,
   A2ASharedState,
   TextPart,
+  FileWithBytes,
+  FileWithUri,
 } from "./types";
 import { isDataPart } from "./types"; // Import type guard
 
@@ -141,7 +142,11 @@ export abstract class A2ABaseNode<
   ): void {
     // Ensure data is a valid object before creating the part
     const dataToStore = typeof data === "object" && data !== null ? data : {};
-    const dataPart: DataPart = { type: "data", data: dataToStore, metadata };
+    const dataPart: DataPart = {
+      kind: "data",
+      data: dataToStore,
+      metadata: metadata ?? undefined,
+    };
     this.setFinalResponseParts(shared, [dataPart]);
   }
 
@@ -174,7 +179,7 @@ export abstract class A2ABaseNode<
     text: string,
     metadata?: Record<string, unknown> | null,
   ): TextPart {
-    return { type: "text", text, metadata };
+    return { kind: "text", text, metadata: metadata ?? undefined };
   }
 
   /**
@@ -190,7 +195,7 @@ export abstract class A2ABaseNode<
   ): DataPart {
     // Ensure data is a valid object
     const dataToStore = typeof data === "object" && data !== null ? data : {};
-    return { type: "data", data: dataToStore, metadata };
+    return { kind: "data", data: dataToStore, metadata: metadata ?? undefined };
   }
 
   /**
@@ -204,25 +209,36 @@ export abstract class A2ABaseNode<
    * @throws Error if fileContent is missing both bytes and uri.
    */
   protected createFilePart(
-    fileContent: FileContent,
+    fileContent: FileWithBytes | FileWithUri,
     metadata?: Record<string, unknown> | null,
   ): FilePart {
-    if (
-      !fileContent ||
-      (fileContent.bytes === undefined && fileContent.uri === undefined)
-    ) {
+    const hasBytes =
+      typeof (fileContent as FileWithBytes).bytes === "string" &&
+      (fileContent as FileWithBytes).bytes.length > 0;
+    const hasUri =
+      typeof (fileContent as FileWithUri).uri === "string" &&
+      (fileContent as FileWithUri).uri.length > 0;
+
+    if (!hasBytes && !hasUri) {
       throw new Error(
         "FilePart requires fileContent with either 'bytes' or 'uri'.",
       );
     }
-    // Basic validation for fileContent structure (optional, schema validation is better at edges)
-    const validFileContent: FileContent = {
-      name: fileContent.name,
-      mimeType: fileContent.mimeType,
-      bytes: fileContent.bytes,
-      uri: fileContent.uri,
-    };
-    return { type: "file", file: validFileContent, metadata };
+
+    const normalized =
+      hasBytes && "bytes" in fileContent
+        ? {
+            bytes: fileContent.bytes,
+            mimeType: fileContent.mimeType,
+            name: fileContent.name,
+          }
+        : {
+            uri: (fileContent as FileWithUri).uri,
+            mimeType: fileContent.mimeType,
+            name: fileContent.name,
+          };
+
+    return { kind: "file", file: normalized, metadata: metadata ?? undefined };
   }
 
   // Note: Helpers for status updates are best handled via `this.flow?.onStatusUpdate`

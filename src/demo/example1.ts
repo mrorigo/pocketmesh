@@ -30,21 +30,23 @@ const fakeApiCall = async (data: any, failRate: number = 0): Promise<any> => {
 
 class FetchItemNode extends BaseNode<
   SharedState,
-  ItemParams,
+  Params,
   void,
-  ItemResult
+  ItemResult,
+  ActionResult
 > {
-  async prepare(_shared: SharedState, _params: ItemParams): Promise<void> {
+  async prepare(_shared: SharedState, _params: Params): Promise<void> {
     // No preparation needed for this node
     return;
   }
   async execute(
     _prep: void,
     _shared: SharedState,
-    params: ItemParams,
+    params: Params,
     attempt: number = 0,
   ): Promise<ItemResult> {
-    const id = params.itemId || "unknown";
+    const typedParams = params as ItemParams;
+    const id = typedParams.itemId || "unknown";
     console.log(` Fetching item: ${id} (Attempt: ${attempt + 1})`);
     const result = await fakeApiCall({ id }, 0.4);
     return { data: `ItemData[${id}] Result: ${JSON.stringify(result)}` };
@@ -53,7 +55,7 @@ class FetchItemNode extends BaseNode<
     shared: SharedState,
     _prep: void,
     execResult: ItemResult,
-    params: ItemParams,
+    params: Params,
   ): Promise<ActionResult> {
     // Do not push to shared.items here; handled in flow
     return ActionKey.Default;
@@ -62,10 +64,11 @@ class FetchItemNode extends BaseNode<
     _prep: void,
     error: Error,
     _shared: SharedState,
-    params: ItemParams,
+    params: Params,
     attempt: number,
   ): Promise<ItemResult> {
-    const id = params.itemId || "unknown";
+    const typedParams = params as ItemParams;
+    const id = typedParams.itemId || "unknown";
     console.warn(
       ` Fetch fallback for item ${id} on attempt ${attempt + 1}: ${error.message}`,
     );
@@ -75,14 +78,16 @@ class FetchItemNode extends BaseNode<
 
 class ProcessItemsNode extends BaseNode<
   SharedState,
-  ProcessParams,
+  Params,
   string[],
-  string[]
+  string[],
+  ActionResult
 > {
-  async prepare(shared: SharedState, params: ProcessParams): Promise<string[]> {
+  async prepare(shared: SharedState, params: Params): Promise<string[]> {
+    const typedParams = params as ProcessParams;
     const items = (shared.items ?? []) as string[];
     console.log(
-      ` Prepare Processing (Mode: ${params.processMode}): Found ${items.length} items.`,
+      ` Prepare Processing (Mode: ${typedParams.processMode}): Found ${items.length} items.`,
     );
     return items;
   }
@@ -90,7 +95,7 @@ class ProcessItemsNode extends BaseNode<
   async execute(
     _prep: string[],
     _shared: SharedState,
-    _params: ProcessParams,
+    _params: Params,
     _attempt: number = 0,
   ): Promise<string[]> {
     // Not used, as this is a batch node (uses executeItem)
@@ -99,13 +104,14 @@ class ProcessItemsNode extends BaseNode<
   async executeItem(
     item: string,
     _shared: SharedState,
-    params: ProcessParams,
+    params: Params,
     attempt: number,
   ): Promise<string> {
+    const typedParams = params as ProcessParams;
     console.log(
       `   Processing item: ${item.substring(0, 30)}... (Attempt: ${attempt + 1})`,
     );
-    await sleep(params.processMode === "slow" ? 50 : 15);
+    await sleep(typedParams.processMode === "slow" ? 50 : 15);
     if (item.includes("FAIL") || item.includes("Fallback")) {
       throw new Error("Intentional processing failure");
     }
@@ -115,9 +121,10 @@ class ProcessItemsNode extends BaseNode<
     item: string,
     error: Error,
     _shared: SharedState,
-    params: ProcessParams,
+    params: Params,
     attempt: number,
   ): Promise<string> {
+    const typedParams = params as ProcessParams;
     console.warn(
       `   Fallback processing item: ${item.substring(0, 30)}... on attempt ${attempt + 1}. Error: ${error.message}`,
     );
@@ -127,8 +134,8 @@ class ProcessItemsNode extends BaseNode<
     shared: SharedState,
     _prep: string[],
     execResultList: string[],
-    _params: ProcessParams,
-  ): Promise<"finalize" | "empty"> {
+    _params: Params,
+  ): Promise<ActionResult> {
     shared.processedItems = execResultList;
     console.log(
       ` Post Processing: Stored ${execResultList.length} processed results.`,
@@ -137,7 +144,7 @@ class ProcessItemsNode extends BaseNode<
   }
 }
 
-class FinalizeNode extends BaseNode<SharedState, Params, string[], string> {
+class FinalizeNode extends BaseNode<SharedState, Params, string[], string, ActionResult> {
   async prepare(shared: SharedState, _params: Params): Promise<string[]> {
     return (shared.processedItems ?? []) as string[];
   }
@@ -166,7 +173,7 @@ class FinalizeNode extends BaseNode<SharedState, Params, string[], string> {
   }
 }
 
-class HandleEmptyNode extends BaseNode {
+class HandleEmptyNode extends BaseNode<SharedState, Params, void, void, ActionResult> {
   async prepare(_shared: SharedState, _params: Params): Promise<void> {
     return;
   }
@@ -183,7 +190,7 @@ class HandleEmptyNode extends BaseNode {
     _prep: void,
     _execResult: void,
     _params: Params,
-  ): Promise<string> {
+  ): Promise<ActionResult> {
     return ActionKey.Default;
   }
 }
@@ -193,8 +200,8 @@ class HandleEmptyNode extends BaseNode {
 class FetchBatchFlow extends Flow<
   SharedState,
   Params,
-  BaseNode<SharedState, any, any, any, any>,
-  ActionResult
+  ActionResult,
+  BaseNode<SharedState, Params, void, ItemResult, ActionResult>
 > {
   async prepare(_shared: SharedState, _params: Params): Promise<ItemParams[]> {
     const itemIds = ["A-101", "B-202", "C-303", "D-404", "E-FAIL-505"];
@@ -205,7 +212,7 @@ class FetchBatchFlow extends Flow<
   }
   async finalize(
     shared: SharedState,
-    _prep: ItemParams[],
+    _prep: unknown,
     _execResult: null,
     _params: Params,
   ): Promise<ActionResult> {

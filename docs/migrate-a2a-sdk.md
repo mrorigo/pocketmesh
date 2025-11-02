@@ -6,6 +6,15 @@ PocketMesh currently implements a custom A2A (Agent2Agent) protocol integration 
 
 The official A2A JavaScript SDK (`@a2a-js/sdk` v0.3.4, vendored in `pocketmesh/@a2a-js/sdk/`) provides a standardized, spec-compliant implementation for building A2A servers and clients. It emphasizes modularity with components like `AgentExecutor` for business logic, `DefaultRequestHandler` for JSON-RPC dispatching, `InMemoryTaskStore` (or custom stores) for state management, and `A2AExpressApp` for route setup. The SDK supports core A2A features: tasks, artifacts, streaming (SSE), cancellation, and push notifications.
 
+## Current Implementation Highlights (Post-Migration)
+
+- `src/a2a/PocketMeshTaskStore.ts`: Persists SDK `Task` snapshots into PocketMesh's SQLite persistence, keeping run status in sync.
+- `src/a2a/PocketMeshExecutor.ts`: Bridges PocketMesh `Flow` execution with the SDK `ExecutionEventBus`, emitting `message`, `task`, `status-update`, and `artifact-update` events.
+- `src/a2a/index.ts`: Exposes `createPocketMeshA2AServer`/`a2aServerHandler` helpers built on top of `DefaultRequestHandler` and `A2AExpressApp`.
+- `src/a2a/types.ts` & `src/a2a/basenode.ts`: Re-export official spec types and update helpers to use the new `kind`-based discriminators.
+- `src/a2a/client.ts`: Wraps the official `A2AClient`, providing an async `createA2AClient` factory.
+- Demo (`src/demo/a2a/index.ts`) showcases the new server/client integration with `sendMessage`/`sendMessageStream`.
+
 ### Migration Goals
 - **Replace Custom A2A Code**: Remove or refactor `src/a2a/` (server handlers, client, types) to use the official SDK, reducing maintenance overhead.
 - **Maximize SDK Utilization**: Leverage `AgentExecutor` to wrap PocketMesh flows, official task storage for persistence, and built-in streaming/cancellation.
@@ -18,7 +27,7 @@ The official A2A JavaScript SDK (`@a2a-js/sdk` v0.3.4, vendored in `pocketmesh/@
   - Simplified server setup (fewer custom handlers).
   - Better interoperability with other A2A agents.
   - Focus on PocketMesh strengths: type-safe orchestration, batching, branching.
-- **Scope**: Server migration is primary (custom `handleA2ARequest` → SDK `DefaultRequestHandler`). Client is secondary (custom `createA2AClient` → SDK `A2AClient`). No breaking changes to public API (`a2aServerHandler`, `generateAgentCard`).
+- **Scope**: Server migration replaces the custom `handleA2ARequest` stack with the SDK's `DefaultRequestHandler`/`A2AExpressApp` pipeline via new helpers (`createPocketMeshA2AServer`, `a2aServerHandler`). Client now re-exports the SDK `A2AClient` factory (breaking change for async initialization).
 
 ### Risks & Considerations
 - **Persistence Integration**: Custom persistence must map to SDK's `TaskStore` interface (custom implementation needed).

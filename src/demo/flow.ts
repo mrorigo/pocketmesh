@@ -76,7 +76,12 @@ export class AnswerNode extends BaseNode<
 }
 
 // Flow factory
-export function createQaFlow(): Flow<QASharedState, Params, GetQuestionNode> {
+export function createQaFlow(): Flow<
+  QASharedState,
+  Params,
+  ActionResult,
+  GetQuestionNode
+> {
   const getQuestion = new GetQuestionNode();
   const answer = new AnswerNode();
 

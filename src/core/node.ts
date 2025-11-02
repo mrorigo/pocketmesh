@@ -1,4 +1,3 @@
-import { Flow } from "./flow"; // Keep import for Flow
 import type { SharedState, Params, ActionResult, NodeOptions } from "./types";
 
 /**
@@ -35,14 +34,15 @@ export abstract class BaseNode<
   /**
    * Reference to the parent Flow (set automatically).
    */
-  // Changed type annotation to allow Flow<S, P, any, any> for better type hints if possible, but kept any for compatibility
-  public flow?: Flow<S, P, any, Action>;
+  public flow?: FlowContext<S, Action>;
 
   /**
    * Successor nodes, keyed by action string.
    */
-  private readonly successors: Map<string, BaseNode<any, any, any, any, any>> =
-    new Map();
+  private readonly successors: Map<
+    string,
+    BaseNode<S, P, unknown, unknown, Action>
+  > = new Map();
 
   /**
    * Set default parameters for this node.
@@ -70,7 +70,7 @@ export abstract class BaseNode<
    * @param action Action string (default: "default")
    * @returns node
    */
-  addSuccessor<N extends BaseNode<any, any, any, any, any>>( // Keep generics for flexibility
+  addSuccessor<N extends BaseNode<S, P, unknown, unknown, Action>>( // Keep generics for flexibility
     node: N,
     action: string = "default",
   ): N {
@@ -83,8 +83,7 @@ export abstract class BaseNode<
     // If adding a successor to a node that is already part of a flow,
     // propagate the flow reference to the new node and its downstream nodes.
     if (this.flow) {
-      // Cast this.flow to a more general type if necessary for the helper call
-      (this.flow as Flow<any, any, any, any>).setFlowOnNode(node);
+      this.flow.setFlowOnNode(node);
     }
     return node;
   }
@@ -94,7 +93,9 @@ export abstract class BaseNode<
    * @param targetNode Node to connect to
    * @returns targetNode
    */
-  connectTo<N extends BaseNode<any, any, any, any, any>>(targetNode: N): N {
+  connectTo<N extends BaseNode<S, P, unknown, unknown, Action>>(
+    targetNode: N,
+  ): N {
     return this.addSuccessor(targetNode, "default");
   }
 
@@ -104,7 +105,7 @@ export abstract class BaseNode<
    * @param targetNode Node to connect to
    * @returns targetNode
    */
-  connectAction<N extends BaseNode<any, any, any, any, any>>(
+  connectAction<N extends BaseNode<S, P, unknown, unknown, Action>>(
     action: string,
     targetNode: N,
   ): N {
@@ -118,7 +119,10 @@ export abstract class BaseNode<
    * Get all successor nodes.
    * @returns ReadonlyMap of successors
    */
-  getSuccessors(): ReadonlyMap<string, BaseNode<any, any, any, any, any>> {
+  getSuccessors(): ReadonlyMap<
+    string,
+    BaseNode<S, P, unknown, unknown, Action>
+  > {
     return this.successors;
   }
 
@@ -171,11 +175,11 @@ export abstract class BaseNode<
    * @param attempt Attempt index (0 for first try)
    */
   async executeItem?(
-    item: any,
+    item: unknown,
     shared: S,
     params: P,
     attempt: number,
-  ): Promise<any>; // <-- ADDED shared
+  ): Promise<unknown>; // <-- ADDED shared
 
   /**
    * (Optional) For batch nodes: fallback logic for a single item.
@@ -187,12 +191,12 @@ export abstract class BaseNode<
    * @param attempt Attempt index of the failed execution
    */
   async executeItemFallback?(
-    item: any,
+    item: unknown,
     error: Error,
     shared: S, // <-- ADDED shared
     params: P,
     attempt: number,
-  ): Promise<any>;
+  ): Promise<unknown>;
 
   /**
    * (Optional) Fallback logic for main execution (`execute`).
@@ -210,4 +214,23 @@ export abstract class BaseNode<
     params: P,
     attempt: number,
   ): Promise<ExecResult>;
+}
+
+export interface FlowContext<
+  S extends SharedState = SharedState,
+  Action extends ActionResult = ActionResult,
+> {
+  setFlowOnNode(
+    node: BaseNode<S, Params, unknown, unknown, Action>,
+    visited?: Set<BaseNode<S, Params, unknown, unknown, Action>>,
+  ): void;
+  onStatusUpdate?: (status: {
+    node: string;
+    state: string;
+    message?: string;
+    step: number;
+    totalSteps?: number;
+    shared?: S;
+  }) => void;
+  onArtifact?: (artifact: unknown) => void;
 }
