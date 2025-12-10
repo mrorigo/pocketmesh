@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PocketMesh - Type-Safe Agentic Workflows</title>
+    <meta name="description"
+        content="Build powerful, type-safe, async-native agentic workflows in TypeScript with first-class A2A protocol support.">
+    <style>
+        :root {
+            --bg-color: #0d0d12;
+            --text-color: #e0e0e0;
+            --primary-color: #6366f1;
+            /* Indigo */
+            --primary-hover: #4f46e5;
+            --accent-color: #ec4899;
+            /* Pink */
+            --secondary-bg: #161b22;
+            --card-bg: #1e2530;
+            --border-color: #30363d;
+            --code-bg: #0f1117;
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-mono: 'Fira Code', 'JetBrains Mono', Consolas, Monaco, 'Andale Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Typography */
+        h1,
+        h2,
+        h3,
+        h4 {
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+            color: #a1a1aa;
+        }
+
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: 0.2s;
+        }
+
+        a:hover {
+            color: var(--accent-color);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-color);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Navigation */
+        nav {
+            padding: 1.5rem 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(13, 13, 18, 0.8);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: #fff;
+            letter-spacing: -0.03em;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: #a1a1aa;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover {
+            color: #fff;
+        }
+
+        .github-btn {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            color: #fff !important;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .github-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        /* Hero */
+        header.hero {
+            padding: 8rem 0 0;
+            /* Reduced bottom padding */
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+
+        /* header.hero .overlay {
+            margin-top: 230px;
+        } */
+
+        header.hero .overlay p.lead {
+            text-shadow: 0 0 10px rgba(0, 55, 55, 0.7);
+        }
+
+        .hero-badge {
+            display: inline-block;
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary-color);
+            padding: 0.25rem 0.75rem;
+            border-radius: 99px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .hero h1 {
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1.5rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero p.lead {
+            font-size: 1.25rem;
+            max-width: 700px;
+            margin: 0 auto 2.5rem;
+            line-height: 1.7;
+        }
+
+        .cta-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 4rem;
+        }
+
+        .hero-image-container {
+            /* top: -700px; */
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+            /* Negative margin to pull into next section slightly or just sit tight */
+            position: relative;
+            z-index: -1;
+            perspective: 1000px;
+        }
+
+        .hero-image-container img {
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 0 100px rgba(99, 102, 241, 0.15), 0 20px 40px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transform: rotateX(2deg);
+            transition: transform 0.5s ease;
+        }
+
+        .hero-image-container:hover img {
+            transform: rotateX(0deg);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: #fff;
+            box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.39);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.23);
+        }
+
+        .btn-secondary {
+            background: var(--card-bg);
+            color: #fff;
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            border-color: #888;
+            background: #252b36;
+        }
+
+        /* Canvas Background */
+        #mesh-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        /* Features Grid */
+        .features {
+            padding: 8rem 0 4rem;
+            position: relative;
+            z-index: 1;
+            background: linear-gradient(to bottom, var(--bg-color) 0%, #111 100%);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        /* Tablet */
+        @media (min-width: 768px) {
+            .grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Desktop */
+        @media (min-width: 1100px) {
+            .grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .card {
+            background: rgba(30, 37, 48, 0.6);
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            border-radius: 12px;
+            transition: 0.3s;
+            backdrop-filter: blur(5px);
+            height: 100%;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary-color);
+            background: rgba(30, 37, 48, 0.8);
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(99, 102, 241, 0.1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Code Preview */
+        .code-section {
+            padding: 4rem 0;
+            background: #0b0d11;
+        }
+
+        .code-window {
+            background: var(--code-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .window-bar {
+            padding: 0.75rem 1rem;
+            background: #161b22;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tabs {
+            display: flex;
+            background: #1a1d24;
+            border-bottom: 1px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.25rem;
+            background: transparent;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            background: #252b36;
+            color: #ccc;
+        }
+
+        .tab-btn.active {
+            background: var(--code-bg);
+            color: var(--primary-color);
+            box-shadow: inset 0 2px 0 0 var(--primary-color);
+        }
+
+        .code-content {
+            display: none;
+        }
+
+        .code-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .red {
+            background: #ff5f56;
+        }
+
+        .yellow {
+            background: #ffbd2e;
+        }
+
+        .green {
+            background: #27c93f;
+        }
+
+        .title {
+            margin-left: 1rem;
+            font-size: 0.8rem;
+            color: #888;
+            font-family: var(--font-mono);
+        }
+
+        pre {
+            padding: 1.5rem;
+            overflow-x: auto;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .token.keyword {
+            color: #c678dd;
+        }
+
+        .token.class {
+            color: #e5c07b;
+        }
+
+        .token.function {
+            color: #61afef;
+        }
+
+        .token.string {
+            color: #98c379;
+        }
+
+        .token.comment {
+            color: #5c6370;
+            font-style: italic;
+        }
+
+        .token.operator {
+            color: #56b6c2;
+        }
+
+        /* Footer */
+        footer {
+            padding: 4rem 0 2rem;
+            border-top: 1px solid var(--border-color);
+            margin-top: 4rem;
+            text-align: center;
+            color: #666;
+        }
+
+        footer .links {
+            margin-bottom: 1.5rem;
+        }
+
+        footer .links a {
+            margin: 0 1rem;
+            color: #888;
+        }
+
+        footer .links a:hover {
+            color: var(--primary-color);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .hero {
+                padding: 6rem 0 4rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav>
+        <div class="container">
+            <a href="#" class="logo">
+                PocketMesh
+            </a>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#demo">Demo</a></li>
+                <li><a href="https://google.github.io/A2A/" target="_blank">A2A Protocol</a></li>
+                <li>
+                    <a href="https://github.com/mrorigo/pocketmesh" class="github-btn" target="_blank">
+                        <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor">
+                            <path
+                                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z">
+                            </path>
+                        </svg>
+                        GitHub v0.3.0
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <canvas id="mesh-canvas"></canvas>
+        <div class="container">
+            <div class="overlay">
+                <div class="hero-badge">Now with @a2a-js/sdk integration</div>
+                <h1>The Agentic Web Starts Here.</h1>
+                <p class="lead">Build powerful, type-safe, async-native agentic workflows in TypeScript.<br /> Zero
+                    boilerplate.<br />
+                    Full A2A protocol interoperability.</p>
+                <div class="cta-group">
+                    <a href="https://github.com/mrorigo/pocketmesh" class="btn btn-primary">Get Started</a>
+                    <a href="#demo" class="btn btn-secondary">View Code</a>
+                </div>
+            </div>
+            <div class="hero-image-container">
+                <img src="pocketmesh.png" alt="PocketMesh Framework Visualization">
+            </div>
+        </div>
+    </header>
+
+    <section id="features" class="features">
+        <div class="container">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-icon">⚡</div>
+                    <h3>Async-Native</h3>
+                    <p>Designed for the asynchronous nature of LLMs and network calls. Built-in support for streaming,
+                        retries, and long-running processes.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon">🛡️</div>
+                    <h3>Type-Safe</h3>
+                    <p>Full TypeScript support from the ground up. Catch errors at compile time with typed flows, nodes,
+                        and shared state.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon">🤝</div>
+                    <h3>A2A Interop</h3>
+                    <p>First-class support for the Agent-to-Agent (A2A) protocol. Expose your flows as discoverable,
+                        interoperable agent APIs.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon">🧠</div>
+                    <h3>Agentic First</h3>
+                    <p>Includes a gold-standard prompt to let LLMs write their own workflows. Self-assembling code is
+                        just one prompt away.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="demo" class="code-section">
+        <div class="container">
+            <div style="text-align: center; margin-bottom: 3rem;">
+                <h2>Less Boilerplate, More Logic</h2>
+                <p>Define nodes, connect them, and run. Simple as that.</p>
+            </div>
+
+            <div class="code-window">
+                <div class="window-bar">
+                    <div class="dot red"></div>
+                    <div class="dot yellow"></div>
+                    <div class="dot green"></div>
+                </div>
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="openTab(event, 'code-basic')">1. Define a Flow</button>
+                    <button class="tab-btn" onclick="openTab(event, 'code-server')">2. Expose as Agent</button>
+                    <button class="tab-btn" onclick="openTab(event, 'code-client')">3. Call A2A Agent</button>
+                </div>
+
+                <!-- Tab 1: Basic Flow -->
+                <div id="code-basic" class="code-content active">
+                    <pre><code><span class="token keyword">import</span> { Flow, BaseNode } <span class="token keyword">from</span> <span class="token string">"pocketmesh"</span>;
+
+<span class="token comment">// Define a node</span>
+<span class="token keyword">class</span> <span class="token class">HelloNode</span> <span class="token keyword">extends</span> <span class="token class">BaseNode</span> {
+  <span class="token keyword">async</span> <span class="token function">prepare</span>(_shared, params) { <span class="token keyword">return</span> params.name ?? <span class="token string">"World"</span>; }
+  
+  <span class="token keyword">async</span> <span class="token function">execute</span>(name) { 
+    <span class="token keyword">return</span> <span class="token string">`Hello, ${name}!`</span>; 
+  }
+  
+  <span class="token keyword">async</span> <span class="token function">finalize</span>(shared, _prep, result) {
+    shared.greeting = result;
+    <span class="token keyword">return</span> <span class="token string">"default"</span>;
+  }
+}
+
+<span class="token comment">// Run the flow</span>
+<span class="token keyword">const</span> flow = <span class="token keyword">new</span> <span class="token class">Flow</span>(<span class="token keyword">new</span> <span class="token class">HelloNode</span>());
+<span class="token keyword">await</span> flow.<span class="token function">runLifecycle</span>({}, { name: <span class="token string">"Mesh"</span> });</code></pre>
+                </div>
+
+                <!-- Tab 2: A2A Server -->
+                <div id="code-server" class="code-content">
+                    <pre><code><span class="token keyword">import</span> { generateAgentCard, a2aServerHandler } <span class="token keyword">from</span> <span class="token string">"pocketmesh/a2a"</span>;
+
+<span class="token comment">// 1. Define Agent Identity</span>
+<span class="token keyword">const</span> agentCard = <span class="token function">generateAgentCard</span>({
+  name: <span class="token string">"Greeter Agent"</span>,
+  skills: [{ id: <span class="token string">"greet"</span>, inputModes: [<span class="token string">"text"</span>] }]
+});
+
+<span class="token comment">// 2. Serve with Express</span>
+app.<span class="token function">use</span>(<span class="token string">"/a2a"</span>, <span class="token function">a2aServerHandler</span>({
+  flows: { greet: <span class="token keyword">new</span> <span class="token class">GreetFlow</span>() },
+  agentCard
+}));</code></pre>
+                </div>
+
+                <!-- Tab 3: A2A Client -->
+                <div id="code-client" class="code-content">
+                    <pre><code><span class="token keyword">import</span> { createA2AClient } <span class="token keyword">from</span> <span class="token string">"pocketmesh/a2a"</span>;
+
+<span class="token comment">// 1. Connect to any A2A agent</span>
+<span class="token keyword">const</span> client = <span class="token keyword">await</span> <span class="token function">createA2AClient</span>(<span class="token string">"https://agent.example.com"</span>);
+
+<span class="token comment">// 2. Send a message (Task)</span>
+<span class="token keyword">const</span> response = <span class="token keyword">await</span> client.<span class="token function">sendMessage</span>({
+  message: {
+    role: <span class="token string">"user"</span>,
+    parts: [{ kind: <span class="token string">"text"</span>, text: <span class="token string">"Hello!"</span> }]
+  }
+});</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="links">
+                <a href="#">Documentation</a>
+                <a href="https://google.github.io/A2A/">A2A Spec</a>
+                <a href="https://github.com/mrorigo/pocketmesh">GitHub</a>
+                <a href="#">License</a>
+            </div>
+            <p>&copy; 2025 PocketMesh Project. Licensed under MIT.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Simple Mesh Animation
+        const canvas = document.getElementById('mesh-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+
+        // Resize
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = document.querySelector('header').offsetHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Particle Class
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 0.5; // Slow movement
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 2 + 1;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 0 || this.x > width) this.vx *= -1;
+                if (this.y < 0 || this.y > height) this.vy *= -1;
+            }
+            draw() {
+                ctx.fillStyle = 'rgba(99, 102, 241, 0.3)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Init Particles
+        for (let i = 0; i < 40; i++) particles.push(new Particle());
+
+        // Animation Loop
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+
+            particles.forEach((p, index) => {
+                p.update();
+                p.draw();
+
+                // Draw connections
+                for (let j = index + 1; j < particles.length; j++) {
+                    const p2 = particles[j];
+                    const dx = p.x - p2.x;
+                    const dy = p.y - p2.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < 150) {
+                        ctx.strokeStyle = `rgba(99, 102, 241, ${0.1 * (1 - dist / 150)})`;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.stroke();
+                    }
+                }
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // Tab Switching Logic
+        function openTab(evt, tabName) {
+            // Hide all content
+            const contents = document.getElementsByClassName("code-content");
+            for (let i = 0; i < contents.length; i++) {
+                contents[i].className = contents[i].className.replace(" active", "");
+            }
+
+            // Deactivate all buttons
+            const buttons = document.getElementsByClassName("tab-btn");
+            for (let i = 0; i < buttons.length; i++) {
+                buttons[i].className = buttons[i].className.replace(" active", "");
+            }
+
+            // Show current and activate button
+            document.getElementById(tabName).className += " active";
+            evt.currentTarget.className += " active";
+        }
+    </script>
+</body>
+
+</html>

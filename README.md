@@ -1,4 +1,4 @@
-![PocketMesh Logo](./pocketmesh.png)
+![PocketMesh Logo](./docs/pocketmesh.png)
 
 # PocketMesh
 
